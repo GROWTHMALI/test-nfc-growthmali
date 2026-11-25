@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test NFC Growth Mali</title>
+
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 25px;
+        text-align: center;
+      }
+
+      button {
+        padding: 15px 25px;
+        font-size: 18px;
+        background: #176b55;
+        color: white;
+        border: none;
+        border-radius: 8px;
+      }
+
+      #resultat {
+        margin-top: 25px;
+        padding: 15px;
+        background: #eeeeee;
+        text-align: left;
+        overflow-wrap: anywhere;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h2>GROWTH MALI</h2>
+    <h3>Test de lecture NFC</h3>
+
+    <p>Approchez une carte NFC du smartphone.</p>
+
+    <button onclick="demarrerNFC()">Démarrer la lecture NFC</button>
+
+    <div id="resultat">En attente du démarrage...</div>
+
+    <script>
+      async function demarrerNFC() {
+        const resultat = document.getElementById("resultat");
+
+        if (!("NDEFReader" in window)) {
+          resultat.innerHTML =
+            "ERREUR : Web NFC non disponible dans ce navigateur.";
+          return;
+        }
+
+        try {
+          const ndef = new NDEFReader();
+
+          resultat.innerHTML = "Initialisation du lecteur NFC...";
+
+          ndef.addEventListener("reading", (event) => {
+            const uid = event.serialNumber;
+
+            resultat.innerHTML = `
+                        <h3>CARTE DETECTEE</h3>
+                        <p>Serial Number : ${uid || "Non communiqué"}</p>
+                        <p>Type : ${event.message.records.length} enregistrement(s) NDEF</p>
+                        <p>Heure : ${new Date().toLocaleTimeString()}</p>
+                    `;
+          });
+
+          ndef.addEventListener("readingerror", () => {
+            resultat.innerHTML =
+              "ERREUR : Carte détectée, mais lecture NDEF impossible.";
+          });
+
+          await ndef.scan();
+
+          resultat.innerHTML = "LECTURE ACTIVE : Approchez une carte NFC.";
+        } catch (error) {
+          resultat.innerHTML = `
+                    <h3>ECHEC DU DEMARRAGE</h3>
+                    <p>Type : ${error.name}</p>
+                    <p>Message : ${error.message}</p>
+                `;
+        }
+      }
+    </script>
+  </body>
+</html>
