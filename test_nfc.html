@@ -1,88 +1,135 @@
-<!doctype html>
+
+<!DOCTYPE html>
 <html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Test NFC Growth Mali</title>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Growth Mali - Diagnostic NFC</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    max-width: 650px;
+    margin: auto;
+}
+button {
+    padding: 14px;
+    background: #176B55;
+    color: white;
+    border: none;
+    border-radius: 7px;
+    font-size: 16px;
+}
+#status, #stats, #history {
+    padding: 14px;
+    margin-top: 15px;
+    background: #eee;
+    border-radius: 7px;
+    overflow-wrap: anywhere;
+}
+.entry {
+    border-bottom: 1px solid #ccc;
+    padding: 10px 0;
+}
+</style>
+</head>
+<body>
 
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        padding: 25px;
-        text-align: center;
-      }
+<h2>GROWTH MALI</h2>
+<h3>Diagnostic NFC - MIFARE Classic</h3>
 
-      button {
-        padding: 15px 25px;
-        font-size: 18px;
-        background: #176b55;
-        color: white;
-        border: none;
-        border-radius: 8px;
-      }
+<button id="start">Démarrer le diagnostic</button>
 
-      #resultat {
-        margin-top: 25px;
-        padding: 15px;
-        background: #eeeeee;
-        text-align: left;
-        overflow-wrap: anywhere;
-      }
-    </style>
-  </head>
+<div id="status">En attente...</div>
 
-  <body>
-    <h2>GROWTH MALI</h2>
-    <h3>Test de lecture NFC</h3>
+<div id="stats">
+Lectures réussies : 0<br>
+Erreurs de lecture : 0
+</div>
 
-    <p>Approchez une carte NFC du smartphone.</p>
+<h3>Historique des événements</h3>
+<div id="history"></div>
 
-    <button onclick="demarrerNFC()">Démarrer la lecture NFC</button>
+<script>
+let reader;
+let started = false;
+let readings = 0;
+let errors = 0;
 
-    <div id="resultat">En attente du démarrage...</div>
+const status = document.getElementById("status");
+const stats = document.getElementById("stats");
+const history = document.getElementById("history");
+const button = document.getElementById("start");
 
-    <script>
-      async function demarrerNFC() {
-        const resultat = document.getElementById("resultat");
+function log(message) {
+    const entry = document.createElement("div");
+    entry.className = "entry";
+    entry.textContent =
+        new Date().toLocaleTimeString() + " - " + message;
+    history.prepend(entry);
+}
 
-        if (!("NDEFReader" in window)) {
-          resultat.innerHTML =
-            "ERREUR : Web NFC non disponible dans ce navigateur.";
-          return;
-        }
+function updateStats() {
+    stats.innerHTML =
+        "Lectures réussies : " + readings +
+        "<br>Erreurs de lecture : " + errors;
+}
 
-        try {
-          const ndef = new NDEFReader();
+button.addEventListener("click", async () => {
 
-          resultat.innerHTML = "Initialisation du lecteur NFC...";
+    if (started) return;
 
-          ndef.addEventListener("reading", (event) => {
-            const uid = event.serialNumber;
+    if (!("NDEFReader" in window)) {
+        status.textContent = "Web NFC non disponible.";
+        return;
+    }
 
-            resultat.innerHTML = `
-                        <h3>CARTE DETECTEE</h3>
-                        <p>Serial Number : ${uid || "Non communiqué"}</p>
-                        <p>Type : ${event.message.records.length} enregistrement(s) NDEF</p>
-                        <p>Heure : ${new Date().toLocaleTimeString()}</p>
-                    `;
-          });
+    try {
+        reader = new NDEFReader();
 
-          ndef.addEventListener("readingerror", () => {
-            resultat.innerHTML =
-              "ERREUR : Carte détectée, mais lecture NDEF impossible.";
-          });
+        reader.addEventListener("reading", event => {
 
-          await ndef.scan();
+            readings++;
 
-          resultat.innerHTML = "LECTURE ACTIVE : Approchez une carte NFC.";
-        } catch (error) {
-          resultat.innerHTML = `
-                    <h3>ECHEC DU DEMARRAGE</h3>
-                    <p>Type : ${error.name}</p>
-                    <p>Message : ${error.message}</p>
-                `;
-        }
-      }
-    </script>
-  </body>
+            const serial = event.serialNumber || "UID non communiqué";
+            const count = event.message.records.length;
+
+            log("LECTURE : Serial Number = " +
+                serial + " | Enregistrements NDEF = " + count);
+
+            updateStats();
+        });
+
+        reader.addEventListener("readingerror", () => {
+
+            errors++;
+
+            log("ERREUR : tag détecté mais lecture NDEF impossible.");
+
+            updateStats();
+        });
+
+        status.textContent = "Démarrage du lecteur...";
+
+        await reader.scan();
+
+        started = true;
+        button.disabled = true;
+
+        status.textContent =
+            "LECTURE ACTIVE - Présentez une carte NFC.";
+
+        log("Lecteur NFC démarré.");
+
+    } catch (error) {
+
+        status.textContent =
+            "ERREUR : " + error.name + " - " + error.message;
+
+        log("ERREUR DE DEMARRAGE : " + error.name);
+    }
+});
+</script>
+
+</body>
 </html>
